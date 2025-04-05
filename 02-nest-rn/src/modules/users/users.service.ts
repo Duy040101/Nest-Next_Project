@@ -6,7 +6,9 @@ import { User } from './schemas/user.schema';
 import mongoose, { Model } from 'mongoose';
 import { hashPasswordHelper } from '@/helpers/Util';
 import aqp from 'api-query-params';
-
+import { CreateAuthDto } from '@/auth/dto/create-auth.dto';
+import {v4 as uuidv4} from 'uuid';
+import dayjs from 'dayjs';
 
 @Injectable()
 export class UsersService {
@@ -74,4 +76,25 @@ export class UsersService {
       throw new BadRequestException("id sai");
     }
   }
+  async hanldeRegister(registerDto: CreateAuthDto){
+    const { name, email, password } = registerDto;
+    //check email
+    const isExist = await this.isEmailExist(email);
+    if (isExist) {
+      throw new BadRequestException(`Đã tồn tại: ${email}, Vui lòng sử dụng email khác`);
+    }
+    //hash password
+    const  hashPassword = await hashPasswordHelper(password);
+    const user = await this.UserModel.create({
+      name, email, password: hashPassword , 
+      isActive: false,
+      codeId: uuidv4(),
+      codeExpired: dayjs().add(1,'minutes')
+    })
+
+    //phản hồi
+    return { _id: user._id };
+    //send email
+    
+    }
 }
